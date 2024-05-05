@@ -1,23 +1,26 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
 
 type Worker struct {
 	name  string
 	email string
 	phone string
-	Id    Id
+	id    int
 }
 
 func NewWorker(name string, email string, phone string) (*Worker, error) {
 	if name == "" || email == "" {
 		return nil, errors.New("error, Name and Email")
 	} else {
-		return &Worker{
+		worker := &Worker{
 			name:  name,
 			email: email,
 			phone: phone,
-		}, nil
+		}
+		return worker, nil
 	}
 }
 
@@ -28,6 +31,14 @@ func GetWorker(work *Worker) Worker {
 		phone: work.phone,
 	}
 	return worker
+}
+
+func (work *Worker) StringWorker() []string {
+	return []string{
+		work.name,
+		work.email,
+		work.phone,
+	}
 }
 
 func (worker *Worker) UpdateWorkerInfo(email string, phone string) error {

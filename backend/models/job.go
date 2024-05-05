@@ -9,7 +9,7 @@ type Job struct {
 	status       string
 	observations string
 	history      *IncidenceList
-	Id           Id
+	id           int
 	customer     *Customer
 	responsible  *Worker
 	autor        *Worker

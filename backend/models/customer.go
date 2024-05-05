@@ -1,12 +1,14 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
 
 type Customer struct {
 	name  string
 	email string
 	phone string
-	id    Id
+	id    int
 }
 
 func NewCustomer(name string, email string, phone string) (*Customer, error) {
@@ -28,6 +30,10 @@ func GetCustomer(cust *Customer) Customer {
 		phone: cust.phone,
 	}
 	return customer
+}
+
+func (cust *Customer) SetCustomerId(id map[int]*Customer) {
+
 }
 
 func (cust *Customer) UpdateCustomerInfo(email string, phone string) error {

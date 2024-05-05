@@ -1,6 +1,8 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
 
 type Device struct {
 	owner  *Customer
@@ -8,7 +10,7 @@ type Device struct {
 	kind   string
 	brand  string
 	model  string
-	id     Id
+	id     int
 }
 
 func NewDevice(serial int, owner *Customer, kind string, brand string, model string) (*Device, error) {
