@@ -28,12 +28,19 @@ func GetCustomer(cust *Customer) Customer {
 		name:  cust.name,
 		email: cust.email,
 		phone: cust.phone,
+		id:    cust.id,
 	}
 	return customer
 }
 
-func (cust *Customer) SetCustomerId(id map[int]*Customer) {
-
+func (cust *Customer) SetCustomerId(id int) error {
+	var err error
+	if cust == nil || id == 0 {
+		err = errors.New("[Error]: customer missing")
+	} else {
+		cust.id = id
+	}
+	return err
 }
 
 func (cust *Customer) UpdateCustomerInfo(email string, phone string) error {
