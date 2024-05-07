@@ -33,20 +33,33 @@ func GetCustomer(cust *Customer) Customer {
 	return customer
 }
 
-func (cust *Customer) SetCustomerId(id int) error {
-	var err error
-	if cust == nil || id == 0 {
-		err = errors.New("[Error]: customer missing")
+func (cust *Customer) SetId(id int) error {
+	if id != 0 {
+		return errors.New("[Error]: ID already assigned")
 	} else {
 		cust.id = id
 	}
-	return err
+	return nil
 }
 
-func (cust *Customer) UpdateCustomerInfo(email string, phone string) error {
-	var err error
-	if email == "" && phone == "" {
-		err = errors.New("[Error]: Info details are not set")
+func (cust *Customer) GetId() int {
+	return cust.id
+}
+
+func (cust *Customer) String() []string {
+	return []string{
+		cust.name,
+		cust.email,
+		cust.phone,
+	}
+}
+
+func (cust *Customer) Update(name string, email string, phone string) error {
+	if name == "" && email == "" && phone == "" {
+		return errors.New("[Error]: Update details are not set")
+	}
+	if name != "" {
+		cust.name = name
 	}
 	if email != "" {
 		cust.email = email
@@ -54,5 +67,5 @@ func (cust *Customer) UpdateCustomerInfo(email string, phone string) error {
 	if phone != "" {
 		cust.phone = phone
 	}
-	return err
+	return nil
 }

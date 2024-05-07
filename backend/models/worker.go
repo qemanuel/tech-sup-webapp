@@ -29,24 +29,25 @@ func GetWorker(work *Worker) Worker {
 		name:  work.name,
 		email: work.email,
 		phone: work.phone,
+		id:    work.id,
 	}
 	return worker
 }
 
-func (work *Worker) SetWorkerId(id int) error {
+func (work *Worker) SetId(id int) error {
 	if work.id != 0 {
-		return errors.New("[Error]: The worker already has an ID")
+		return errors.New("[Error]: ID already assigned")
 	} else {
 		work.id = id
 		return nil
 	}
 }
 
-func (work *Worker) GetWorkerId() int {
+func (work *Worker) GetId() int {
 	return work.id
 }
 
-func (work *Worker) StringWorker() []string {
+func (work *Worker) String() []string {
 	return []string{
 		work.name,
 		work.email,
@@ -54,10 +55,12 @@ func (work *Worker) StringWorker() []string {
 	}
 }
 
-func (worker *Worker) UpdateWorkerInfo(email string, phone string) error {
-	var err error
-	if email == "" && phone == "" {
-		err = errors.New("[Error]: Info details are not set")
+func (worker *Worker) Update(name string, email string, phone string) error {
+	if name == "" && email == "" && phone == "" {
+		return errors.New("[Error]: Update details are not set")
+	}
+	if name != "" {
+		worker.name = name
 	}
 	if email != "" {
 		worker.email = email
@@ -65,5 +68,5 @@ func (worker *Worker) UpdateWorkerInfo(email string, phone string) error {
 	if phone != "" {
 		worker.phone = phone
 	}
-	return err
+	return nil
 }
