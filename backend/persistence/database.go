@@ -1,8 +1,11 @@
 package persistence
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -29,8 +32,7 @@ func NewDatabase(path string) (*Database, error) {
 		csvPath:    csvPath,
 		nextIdPath: nextIdPath,
 	}
-	var err error
-	err = databaseTable.write(tablesKeys)
+	err := databaseTable.write(tablesKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +62,6 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 	tablePath := fmt.Sprintf("%s/%s", database.table.path, tableName)
 	csvPath := fmt.Sprintf("%s.csv", tablePath)
 	nextIdPath := fmt.Sprintf("%s.nextId", tablePath)
-	fmt.Println(tablePath, csvPath, nextIdPath)
 	// write table keys definition
 	tableContent := [][]string{tableKeys}
 	err = database.table.overWrite(csvPath, tableContent)
@@ -68,7 +69,7 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 		return nil, err
 	}
 	// write table nextId state
-	nextIdRow := []string{fmt.Sprint(database.table.nextId)}
+	nextIdRow := []string{"1"}
 	nextIdContent := [][]string{nextIdRow}
 	err = database.table.overWrite(nextIdPath, nextIdContent)
 	if err != nil {
@@ -94,4 +95,48 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 		return nil, err
 	}
 	return &returnTable, err
+}
+
+func LoadTable(path string, tableName string) (*Table, error) {
+	// find files
+	var csvPath string
+	var nextIdPath string
+	if path == "" {
+		csvPath = fmt.Sprintf("./%s.csv", tableName)
+		nextIdPath = fmt.Sprintf("./%s.nextId", tableName)
+	} else {
+		csvPath = fmt.Sprintf("%s/%s.csv", path, tableName)
+		nextIdPath = fmt.Sprintf("%s/%s.nextId", path, tableName)
+	}
+	// read nextId file value
+	nextIdRaw, _ := readAll(nextIdPath)
+	nextId, _ := strconv.Atoi(nextIdRaw[0][0])
+	// read table file keys
+	tableRaw, _ := readAll(csvPath)
+	tableKeys := tableRaw[0]
+	return &Table{
+		id:         0,
+		keys:       tableKeys,
+		nextId:     nextId,
+		path:       path,
+		csvPath:    csvPath,
+		nextIdPath: nextIdPath,
+	}, nil
+}
+
+func readAll(csvPath string) ([][]string, error) {
+
+	csvfile, err := os.Open(csvPath)
+	if err != nil {
+		return nil, err
+	}
+	csvfile.Seek(0, 0)
+	reader := csv.NewReader(csvfile)
+
+	rawCSVdata, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	csvfile.Close()
+	return rawCSVdata, nil
 }
