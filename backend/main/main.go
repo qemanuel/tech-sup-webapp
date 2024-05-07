@@ -2,38 +2,40 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/qemanuel/tech-sup-webapp/backend/persistence"
 )
 
-func main() {
-
-	//	worker1, _ := models.NewWorker("worker1",
-	//		"worker1@gmail.com",
-	//		"152345424")
-	//
-	//	worker2, _ := models.NewWorker("worker2",
-	//		"worker2@gmail.com",
-	//		"124453453")
-	//
-	//	worker3, _ := models.NewWorker("worker3",
-	//		"worker3@gmail.com",
-	//		"124453453")
-	//
+func initDatabase() (*persistence.Database, map[string]*persistence.Table) {
 	databasePath := "/Users/qemanuel/IT/personal/github/tech-sup-webapp/backend/main/database"
-	//database, _ := persistence.NewDatabase(databasePath)
-	//workersTable, _ := database.NewTable("workers", []string{"id", "name", "email", "phone"})
+	tables := map[string][]string{
+		"workers":   {"id", "name", "email", "phone"},
+		"customers": {"id", "name", "email", "phone"},
+		"devices":   {"id", "owner", "kind", "brand", "model", "serial"},
+		//		"jobs":       {""},
+		//		"incidences": {""},
+	}
+	tablesMap := map[string]*persistence.Table{}
+	_, err := os.Stat(fmt.Sprintf("%s/database.csv", databasePath))
+	if err != nil {
+		newDatabase, _ := persistence.NewDatabase(databasePath)
+		for tableName, keys := range tables {
+			table, _ := newDatabase.NewTable(tableName, keys)
+			tablesMap[tableName] = table
+		}
+		return newDatabase, tablesMap
+	} else {
+		loadDatabase, _ := persistence.LoadDatabase(databasePath)
+		for tableName, _ := range tables {
+			table, _ := persistence.LoadTable(databasePath, tableName)
+			tablesMap[tableName] = table
+		}
+		return loadDatabase, tablesMap
+	}
+}
 
-	database, _ := persistence.LoadDatabase(databasePath)
-	workersTable, _ := database.NewTable("test", []string{"id", "name", "email", "phone"})
-	fmt.Println(workersTable)
-
-	//	workersTable.AddElement(worker1.StringWorker())
-	//	workersTable.AddElement(worker2.StringWorker())
-	//	workersTable.AddElement(worker3.StringWorker())
-
-	//fmt.Println(workersTable.GetElement(2))
-	//workersTable.RemoveElement(1)
-	//fmt.Println(workersTable.GetAllElements())
-
+func main() {
+	database, tables := initDatabase()
+	fmt.Println(database, tables)
 }
