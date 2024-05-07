@@ -1,21 +1,13 @@
 package persistence
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 )
 
 type Database struct {
-	id         int
-	keys       []string
-	nextId     int
-	path       string
-	csvPath    string
-	nextIdPath string
+	table *Table
 }
 
 func NewDatabase(path string) (*Database, error) {
@@ -23,88 +15,83 @@ func NewDatabase(path string) (*Database, error) {
 	var nextIdPath string
 	if path == "" {
 		csvPath = "./database.csv"
-		nextIdPath = "./nextId"
+		nextIdPath = "./database.nextId"
 	} else {
 		csvPath = fmt.Sprintf("%s/database.csv", path)
-		nextIdPath = fmt.Sprintf("%s/nextId", path)
+		nextIdPath = fmt.Sprintf("%s/database.nextId", path)
 	}
-	tablesKeys := []string{"id", "csvPath", "keys", "nextId"}
-	var err error
-	err = write(csvPath, tablesKeys)
-	write(nextIdPath, []string{"1"})
-	if err != nil {
-		return nil, err
-	} else {
-		return &Database{
-			id:         0,
-			keys:       tablesKeys,
-			nextId:     1,
-			path:       path,
-			csvPath:    csvPath,
-			nextIdPath: nextIdPath,
-		}, nil
-	}
-}
-
-func LoadDatabase(path string) (*Database, error) {
-	var csvPath string
-	var nextIdPath string
-	if path == "" {
-		csvPath = "./database.csv"
-		nextIdPath = "./nextId"
-	} else {
-		csvPath = fmt.Sprintf("%s/database.csv", path)
-		nextIdPath = fmt.Sprintf("%s/nextId", path)
-	}
-	databaseNextId, _ := strconv.Atoi(csvFileToSlice(nextIdPath)[0][0])
-	databaseKeys := csvFileToSlice(csvPath)[0]
-	return &Database{
+	tablesKeys := []string{"id", "path", "keys"}
+	databaseTable := &Table{
 		id:         0,
-		keys:       databaseKeys,
-		nextId:     databaseNextId,
+		keys:       tablesKeys,
+		nextId:     1,
 		path:       path,
 		csvPath:    csvPath,
 		nextIdPath: nextIdPath,
+	}
+	var err error
+	err = databaseTable.write(tablesKeys)
+	if err != nil {
+		return nil, err
+	}
+	return &Database{
+		table: databaseTable,
 	}, nil
 }
 
-func (database *Database) update(table Table) error {
-	row := []string{fmt.Sprint(table.id), table.csvPath, strings.Join(table.keys, " "), fmt.Sprint(table.nextId)}
-	err := write(database.csvPath, row)
+func LoadDatabase(path string) (*Database, error) {
+	tableName := "database"
+	databaseTable, err := LoadTable(path, tableName)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	f, err := os.OpenFile(database.nextIdPath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		return err
-	}
-	// Reset the file size
-	f.Truncate(0)
-	// Position on the beginning of the file:
-	f.Seek(0, 0)
-	w := csv.NewWriter(f)
-	w.Write([]string{fmt.Sprint(database.nextId)})
-	w.Flush()
-	f.Close()
-	return nil
+	return &Database{
+		table: databaseTable,
+	}, nil
 }
 
-func (database *Database) NewTable(tableName string, keys []string) (*Table, error) {
-	if len(keys) == 0 || tableName == "" {
+func (database *Database) NewTable(tableName string, tableKeys []string) (*Table, error) {
+	// validate inputs
+	if len(tableKeys) == 0 || tableName == "" {
 		return nil, errors.New("[Error]: keys or csvPath missing")
 	}
-	csvPath := fmt.Sprintf("%s/%s.csv", database.path, tableName)
-	err := write(csvPath, keys)
+	// define table files path
+	var err error
+	tablePath := fmt.Sprintf("%s/%s", database.table.path, tableName)
+	csvPath := fmt.Sprintf("%s.csv", tablePath)
+	nextIdPath := fmt.Sprintf("%s.nextId", tablePath)
+	fmt.Println(tablePath, csvPath, nextIdPath)
+	// write table keys definition
+	tableContent := [][]string{tableKeys}
+	err = database.table.overWrite(csvPath, tableContent)
+	if err != nil {
+		return nil, err
+	}
+	// write table nextId state
+	nextIdRow := []string{fmt.Sprint(database.table.nextId)}
+	nextIdContent := [][]string{nextIdRow}
+	err = database.table.overWrite(nextIdPath, nextIdContent)
 	if err != nil {
 		return nil, err
 	}
 	returnTable := Table{
-		id:      database.nextId,
-		keys:    keys,
-		nextId:  1,
-		csvPath: csvPath,
+		id:         database.table.nextId,
+		keys:       tableKeys,
+		nextId:     1,
+		path:       tablePath,
+		csvPath:    csvPath,
+		nextIdPath: nextIdPath,
 	}
-	database.nextId += 1
-	updateErr := database.update(returnTable)
-	return &returnTable, updateErr
+	// Update database table with the added table definition
+	newTableRow := []string{fmt.Sprint(database.table.nextId), tablePath, strings.Join(tableKeys, " ")}
+	err = database.table.write(newTableRow)
+	if err != nil {
+		return nil, err
+	}
+	// update database nextId state
+	err = database.table.updateId()
+	if err != nil {
+		return nil, err
+	}
+	return &returnTable, err
 }
