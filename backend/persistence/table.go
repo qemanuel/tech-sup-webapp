@@ -68,15 +68,14 @@ func readAll(csvPath string) ([][]string, error) {
 	return rawCSVdata, nil
 }
 
-func (table *Table) ReadRow(id int) []string {
-	idToFind := fmt.Sprint(id)
+func (table *Table) ReadRow(id string) []string {
 	rawCSVdata, err := readAll(table.csvPath)
 	if err != nil {
 		return nil
 	}
 	found := []string{}
 	for _, line := range rawCSVdata {
-		if line[0] == idToFind {
+		if line[0] == id {
 			found = line
 			break
 		}
@@ -93,15 +92,14 @@ func (table *Table) AddRow(row []string) (int, error) {
 	return returnID, nil
 }
 
-func (table *Table) RemoveRow(id int) error {
-	idToFind := fmt.Sprint(id)
+func (table *Table) RemoveRow(id string) error {
 	rawCSVdata, err := readAll(table.csvPath)
 	if err != nil {
 		return nil
 	}
 	var updatedCSVData [][]string
 	for index, line := range rawCSVdata {
-		if line[0] == idToFind {
+		if line[0] == id {
 			updatedCSVData = append(rawCSVdata[:index], rawCSVdata[index+1:]...)
 			break
 		}
