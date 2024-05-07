@@ -1,11 +1,8 @@
 package persistence
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 )
 
@@ -14,15 +11,11 @@ type Database struct {
 }
 
 func NewDatabase(path string) (*Database, error) {
-	var csvPath string
-	var nextIdPath string
 	if path == "" {
-		csvPath = "./database.csv"
-		nextIdPath = "./database.nextId"
-	} else {
-		csvPath = fmt.Sprintf("%s/database.csv", path)
-		nextIdPath = fmt.Sprintf("%s/database.nextId", path)
+		return nil, errors.New("[Error]: Database path must be set")
 	}
+	csvPath := fmt.Sprintf("%s/database.csv", path)
+	nextIdPath := fmt.Sprintf("%s/database.nextId", path)
 	tablesKeys := []string{"id", "path", "keys"}
 	databaseTable := &Table{
 		id:         0,
@@ -42,6 +35,9 @@ func NewDatabase(path string) (*Database, error) {
 }
 
 func LoadDatabase(path string) (*Database, error) {
+	if path == "" {
+		return nil, errors.New("[Error]: Database path must be set")
+	}
 	tableName := "database"
 	databaseTable, err := LoadTable(path, tableName)
 	if err != nil {
@@ -95,48 +91,4 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 		return nil, err
 	}
 	return &returnTable, err
-}
-
-func LoadTable(path string, tableName string) (*Table, error) {
-	// find files
-	var csvPath string
-	var nextIdPath string
-	if path == "" {
-		csvPath = fmt.Sprintf("./%s.csv", tableName)
-		nextIdPath = fmt.Sprintf("./%s.nextId", tableName)
-	} else {
-		csvPath = fmt.Sprintf("%s/%s.csv", path, tableName)
-		nextIdPath = fmt.Sprintf("%s/%s.nextId", path, tableName)
-	}
-	// read nextId file value
-	nextIdRaw, _ := readAll(nextIdPath)
-	nextId, _ := strconv.Atoi(nextIdRaw[0][0])
-	// read table file keys
-	tableRaw, _ := readAll(csvPath)
-	tableKeys := tableRaw[0]
-	return &Table{
-		id:         0,
-		keys:       tableKeys,
-		nextId:     nextId,
-		path:       path,
-		csvPath:    csvPath,
-		nextIdPath: nextIdPath,
-	}, nil
-}
-
-func readAll(csvPath string) ([][]string, error) {
-
-	csvfile, err := os.Open(csvPath)
-	if err != nil {
-		return nil, err
-	}
-	csvfile.Seek(0, 0)
-	reader := csv.NewReader(csvfile)
-
-	rawCSVdata, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	csvfile.Close()
-	return rawCSVdata, nil
 }

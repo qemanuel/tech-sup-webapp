@@ -33,6 +33,19 @@ func GetWorker(work *Worker) Worker {
 	return worker
 }
 
+func (work *Worker) SetWorkerId(id int) error {
+	if work.id != 0 {
+		return errors.New("[Error]: The worker already has an ID")
+	} else {
+		work.id = id
+		return nil
+	}
+}
+
+func (work *Worker) GetWorkerId() int {
+	return work.id
+}
+
 func (work *Worker) StringWorker() []string {
 	return []string{
 		work.name,
