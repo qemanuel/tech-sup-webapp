@@ -11,7 +11,8 @@ import (
 )
 
 func GetWorkers(w http.ResponseWriter, r *http.Request) {
-	response, err := persistence.GetAll("workers")
+	table := persistence.DB.TablesMap["workers"]
+	response, err := table.GetAll()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -21,8 +22,8 @@ func GetWorkers(w http.ResponseWriter, r *http.Request) {
 
 func GetWorker(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	response, err := persistence.Find("workers", vars["id"])
-	fmt.Println(response, err)
+	table := persistence.DB.TablesMap["workers"]
+	response, err := table.Find(vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
@@ -34,9 +35,10 @@ func GetWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateWorker(w http.ResponseWriter, r *http.Request) {
+	table := persistence.DB.TablesMap["workers"]
 	var worker models.Worker
 	json.NewDecoder(r.Body).Decode(&worker)
-	id, err := persistence.Add("workers", worker)
+	id, err := table.Add(worker)
 	idString := fmt.Sprint(id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -47,10 +49,11 @@ func CreateWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateWorker(w http.ResponseWriter, r *http.Request) {
+	table := persistence.DB.TablesMap["workers"]
 	vars := mux.Vars(r)
 	var worker models.Worker
 	json.NewDecoder(r.Body).Decode(&worker)
-	err := persistence.Update("workers", worker, vars["id"])
+	err := table.Update(worker, vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
@@ -59,8 +62,9 @@ func UpdateWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteWorker(w http.ResponseWriter, r *http.Request) {
+	table := persistence.DB.TablesMap["workers"]
 	vars := mux.Vars(r)
-	err := persistence.Remove("workers", vars["id"])
+	err := table.Remove(vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Worker not found"))
