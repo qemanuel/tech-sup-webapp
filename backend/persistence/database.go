@@ -1,7 +1,6 @@
 package persistence
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +10,7 @@ import (
 
 type Database struct {
 	Path       string
-	NextIdFile string
+	NextIdFile *csvHandler
 	TablesMap  map[string]*Table
 }
 
@@ -24,18 +23,7 @@ func updateId(tableName string) error {
 		nextIdFile := DB.NextIdFile
 		rowSlice := []string{fmt.Sprint(systemTable.nextId)}
 		csvSlice := [][]string{rowSlice}
-		f, err := os.OpenFile(nextIdFile, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return err
-		}
-		// Reset the file size
-		f.Truncate(0)
-		// Position on the beginning of the file
-		f.Seek(0, 0)
-		w := csv.NewWriter(f)
-		w.WriteAll(csvSlice)
-		w.Flush()
-		f.Close()
+		nextIdFile.writeAll(csvSlice)
 		return nil
 
 	} else {
@@ -58,7 +46,8 @@ func updateId(tableName string) error {
 			}
 		}
 		if updatedMapSlice != nil {
-			systemTable.csvHandler.writeAll(systemTable.name, updatedMapSlice)
+			csvSlice := mapAllToCsv(systemTable.name, updatedMapSlice)
+			systemTable.csvHandler.writeAll(csvSlice)
 			return nil
 		} else {
 			return errors.New("[Error]: ID not found")
@@ -74,9 +63,8 @@ func NewDatabase(path string) (*Database, error) {
 	csvPath := fmt.Sprintf("%s/%s.csv", path, tableName)
 	nextIdPath := fmt.Sprintf("%s/nextId", path)
 
-	csvHandler := &csvHandler{
-		csvFile: csvPath,
-	}
+	csvHandler, _ := newCsvHandler(csvPath)
+	nextIdHandler, _ := newCsvHandler(nextIdPath)
 
 	systemKeys := []string{"id", "path", "keys", "nextId"}
 	systemTable := &Table{
@@ -86,19 +74,15 @@ func NewDatabase(path string) (*Database, error) {
 		nextId:     1,
 		csvHandler: csvHandler,
 	}
-	systemMap := make(map[string]string, len(systemKeys))
-	for _, key := range systemKeys {
-		systemMap[key] = key
-	}
 	tablesMap := make(map[string]*Table)
 	tablesMap[tableName] = systemTable
 	DB = &Database{
 		Path:       path,
-		NextIdFile: nextIdPath,
+		NextIdFile: nextIdHandler,
 		TablesMap:  tablesMap,
 	}
 	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
-		err := systemTable.csvHandler.write(tableName, systemMap)
+		err := systemTable.csvHandler.write(systemKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +96,6 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 		return nil, errors.New("[Error]: Table name or keys invalid")
 	}
 	systemTable := database.TablesMap["system"]
-	systemCsv := systemTable.csvHandler.csvFile
 	// define table files path
 	var err error
 	tablePath := fmt.Sprintf("%s/%s", database.Path, tableName)
@@ -131,26 +114,13 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 	}
 	database.TablesMap[tableName] = returnTable
 	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
-		f, err := os.OpenFile(csvPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		// Position on the end of the file
-		f.Seek(0, 2)
-		w := csv.NewWriter(f)
-		w.Write(tableKeys)
-		w.Flush()
-		f.Close()
+		err := returnTable.csvHandler.write(tableKeys)
 		if err != nil {
 			return nil, err
 		}
-
 		// add new table to system table
 		tableRow := []string{fmt.Sprint(systemTable.nextId), tablePath, strings.Join(tableKeys, " "), "1"}
-		f, err = os.OpenFile(systemCsv, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		// Position on the end of the file
-		f.Seek(0, 2)
-		w = csv.NewWriter(f)
-		w.Write(tableRow)
-		w.Flush()
-		f.Close()
+		err = systemTable.csvHandler.write(tableRow)
 		if err != nil {
 			return nil, err
 		} // update database nextId state

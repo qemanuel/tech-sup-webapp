@@ -15,6 +15,29 @@ type Table struct {
 	csvHandler *csvHandler
 }
 
+func mapAllToCsv(tableName string, tableMapSlice []map[string]string) [][]string {
+	csvSlice := make([][]string, len(tableMapSlice)+1)
+	for i, rowMap := range tableMapSlice {
+		keysSlice, valuesSlice := mapToCsv(tableName, rowMap)
+		if i == 0 {
+			csvSlice[i] = keysSlice
+		}
+		csvSlice[i+1] = valuesSlice
+	}
+	return csvSlice
+}
+
+func mapToCsv(tableName string, rowMap map[string]string) (keysSlice []string, valuesSlice []string) {
+	table := DB.TablesMap[tableName]
+	keysSlice = table.keys
+	returnSlice := make([]string, len(keysSlice))
+	for i, key := range table.keys {
+		returnSlice[i] = rowMap[key]
+	}
+	valuesSlice = returnSlice
+	return keysSlice, valuesSlice
+}
+
 func csvToMap(keysSlice []string, valuesSlice []string) map[string]string {
 	returnMap := make(map[string]string, len(keysSlice))
 	for i, key := range keysSlice {
@@ -60,7 +83,8 @@ func (table *Table) Add(model interface{}) (int, error) {
 	mapstructure.Decode(model, &modelMap)
 	returnID := table.nextId
 	modelMap["id"] = fmt.Sprint(returnID)
-	err := table.csvHandler.write(table.name, modelMap)
+	_, rowSlice := mapToCsv(table.name, modelMap)
+	err := table.csvHandler.write(rowSlice)
 	if err != nil {
 		return 0, err
 	}
@@ -83,7 +107,8 @@ func (table *Table) Update(model interface{}, id string) error {
 		}
 	}
 	if updatedMapSlice != nil {
-		table.csvHandler.writeAll(table.name, updatedMapSlice)
+		csvSlice := mapAllToCsv(table.name, updatedMapSlice)
+		table.csvHandler.writeAll(csvSlice)
 		return nil
 	} else {
 		return errors.New("[Error]: ID not found")
@@ -103,7 +128,8 @@ func (table *Table) Remove(id string) error {
 		}
 	}
 	if updatedMapSlice != nil {
-		table.csvHandler.writeAll(table.name, updatedMapSlice)
+		csvSlice := mapAllToCsv(table.name, updatedMapSlice)
+		table.csvHandler.writeAll(csvSlice)
 		return nil
 	} else {
 		return errors.New("[Error]: ID not found")

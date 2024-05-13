@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"encoding/csv"
+	"errors"
 	"os"
 )
 
@@ -9,26 +10,17 @@ type csvHandler struct {
 	csvFile string
 }
 
-func mapToCsv(tableName string, rowMap map[string]string) (keysSlice []string, valuesSlice []string) {
-	table := DB.TablesMap[tableName]
-	keysSlice = table.keys
-	returnSlice := make([]string, len(keysSlice))
-	for i, key := range table.keys {
-		returnSlice[i] = rowMap[key]
+func newCsvHandler(csvFile string) (*csvHandler, error) {
+	if csvFile == "" {
+		return nil, errors.New("[Error]: csvFile path is missing")
+	} else {
+		return &csvHandler{
+			csvFile: csvFile,
+		}, nil
 	}
-	valuesSlice = returnSlice
-	return keysSlice, valuesSlice
 }
 
-func (csvHandler *csvHandler) writeAll(tableName string, tableMapSlice []map[string]string) error {
-	csvSlice := make([][]string, len(tableMapSlice)+1)
-	for i, rowMap := range tableMapSlice {
-		keysSlice, valuesSlice := mapToCsv(tableName, rowMap)
-		if i == 0 {
-			csvSlice[i] = keysSlice
-		}
-		csvSlice[i+1] = valuesSlice
-	}
+func (csvHandler *csvHandler) writeAll(tableSlice [][]string) error {
 	f, err := os.OpenFile(csvHandler.csvFile, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -38,19 +30,18 @@ func (csvHandler *csvHandler) writeAll(tableName string, tableMapSlice []map[str
 	// Position on the beginning of the file
 	f.Seek(0, 0)
 	w := csv.NewWriter(f)
-	w.WriteAll(csvSlice)
+	w.WriteAll(tableSlice)
 	w.Flush()
 	f.Close()
 	return err
 }
 
-func (csvHandler *csvHandler) write(tableName string, modelMap map[string]string) error {
-	_, row := mapToCsv(tableName, modelMap)
+func (csvHandler *csvHandler) write(rowSlice []string) error {
 	f, err := os.OpenFile(csvHandler.csvFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	// Position on the end of the file
 	f.Seek(0, 2)
 	w := csv.NewWriter(f)
-	w.Write(row)
+	w.Write(rowSlice)
 	w.Flush()
 	f.Close()
 	return err
