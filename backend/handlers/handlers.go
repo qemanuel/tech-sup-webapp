@@ -21,10 +21,16 @@ func GetWorkers(w http.ResponseWriter, r *http.Request) {
 
 func GetWorker(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	response := persistence.Find("workers", vars["id"])
-	res, _ := json.Marshal(response)
-	w.WriteHeader(http.StatusOK)
-	w.Write(res)
+	response, err := persistence.Find("workers", vars["id"])
+	fmt.Println(response, err)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+	} else {
+		res, _ := json.Marshal(response)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
+	}
 }
 
 func CreateWorker(w http.ResponseWriter, r *http.Request) {

@@ -9,7 +9,6 @@ import (
 )
 
 type Database struct {
-	//	SystemTable *Table
 	Path       string
 	NextIdFile string
 	TablesMap  map[string]*Table
@@ -101,42 +100,3 @@ func (database *Database) NewTable(tableName string, tableKeys []string) (*Table
 	}
 	return returnTable, err
 }
-
-//func (database *Database) NewTable(tableName string, tableKeys []string) (*Table, error) {
-//	// validate inputs
-//	if len(tableKeys) == 0 || tableName == "" || tableName == "system" {
-//		return nil, errors.New("[Error]: Table name or keys invalid")
-//	}
-//	systemTable := database.TablesMap["system"]
-//	//	tableKeys = append(tableKeys, "id", "nextId")
-//	// define table files path
-//	var err error
-//	tablePath := fmt.Sprintf("%s/%s", database.Path, tableName)
-//	csvPath := fmt.Sprintf("%s.csv", tablePath)
-//
-//	returnTable := &Table{
-//		id:      fmt.Sprint(systemTable.nextId),
-//		keys:    tableKeys,
-//		nextId:  1,
-//		path:    tablePath,
-//		csvPath: csvPath,
-//	}
-//	database.TablesMap[tableName] = returnTable
-//	returnTableMap := make(map[string]string, len(tableKeys))
-//	for _, key := range tableKeys {
-//		returnTableMap[key] = key
-//	}
-//	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
-//		err := write(tableName, returnTableMap)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		// update database nextId state
-//		err = updateId("system")
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//	return returnTable, err
-//}

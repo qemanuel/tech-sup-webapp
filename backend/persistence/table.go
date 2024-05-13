@@ -39,7 +39,6 @@ func csvToMap(keysSlice []string, valuesSlice []string) map[string]string {
 func writeAll(tableName string, tableMapSlice []map[string]string) error {
 	table := DB.TablesMap[tableName]
 	csvSlice := make([][]string, len(tableMapSlice)+1)
-	fmt.Println(len(tableMapSlice), len(csvSlice))
 	for i, rowMap := range tableMapSlice {
 		keysSlice, valuesSlice := mapToCsv(tableName, rowMap)
 		if i == 0 {
@@ -47,7 +46,6 @@ func writeAll(tableName string, tableMapSlice []map[string]string) error {
 		}
 		csvSlice[i+1] = valuesSlice
 	}
-	fmt.Println(csvSlice)
 	f, err := os.OpenFile(table.csvPath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -119,8 +117,8 @@ func updateId(tableName string) error {
 
 	} else {
 		table = DB.TablesMap[tableName]
-		tableRow := Find("system", table.id)
-		if tableRow == nil {
+		tableRow, err := Find("system", table.id)
+		if err != nil {
 			return errors.New("[Error]: table not found")
 		}
 		table.nextId += 1
@@ -156,16 +154,21 @@ func GetAll(tableName string) ([]map[string]string, error) {
 	return tableMapSlice, nil
 }
 
-func Find(tableName string, id string) map[string]string {
+func Find(tableName string, id string) (map[string]string, error) {
 	tableMapSlice, _ := GetAll(tableName)
-	tableFound := make(map[string]string, len(tableMapSlice[0]))
+	//	tableFound := make(map[string]string, len(tableMapSlice[0]))
+	var tableFound map[string]string
 	for _, rowMap := range tableMapSlice {
 		if rowMap["id"] == id {
 			tableFound = rowMap
 			break
 		}
 	}
-	return tableFound
+	if tableFound == nil {
+		return nil, errors.New("404 Not Found")
+	} else {
+		return tableFound, nil
+	}
 }
 
 func Add(tableName string, model interface{}) (int, error) {
