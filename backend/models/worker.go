@@ -5,10 +5,10 @@ import (
 )
 
 type Worker struct {
-	name  string
-	email string
-	phone string
-	id    int
+	Name  string `mapstructure:"name" json:"name"`
+	Email string `mapstructure:"email" json:"email"`
+	Phone string `mapstructure:"phone" json:"phone"`
+	Id    string `mapstructure:"id" json:"id"`
 }
 
 func NewWorker(name string, email string, phone string) (*Worker, error) {
@@ -16,9 +16,9 @@ func NewWorker(name string, email string, phone string) (*Worker, error) {
 		return nil, errors.New("error, Name and Email")
 	} else {
 		worker := &Worker{
-			name:  name,
-			email: email,
-			phone: phone,
+			Name:  name,
+			Email: email,
+			Phone: phone,
 		}
 		return worker, nil
 	}
@@ -26,32 +26,33 @@ func NewWorker(name string, email string, phone string) (*Worker, error) {
 
 func GetWorker(work *Worker) Worker {
 	worker := Worker{
-		name:  work.name,
-		email: work.email,
-		phone: work.phone,
-		id:    work.id,
+		Name:  work.Name,
+		Email: work.Email,
+		Phone: work.Phone,
+		Id:    work.Id,
 	}
 	return worker
 }
 
-func (work *Worker) SetId(id int) error {
-	if work.id != 0 {
+func (work *Worker) SetId(id string) error {
+	if work.Id != "" {
 		return errors.New("[Error]: ID already assigned")
 	} else {
-		work.id = id
+		work.Id = id
 		return nil
 	}
 }
 
-func (work *Worker) GetId() int {
-	return work.id
+func (work *Worker) GetId() string {
+	return work.Id
 }
 
 func (work *Worker) String() []string {
 	return []string{
-		work.name,
-		work.email,
-		work.phone,
+		//fmt.Sprint(work.Id),
+		work.Name,
+		work.Email,
+		work.Phone,
 	}
 }
 
@@ -60,13 +61,13 @@ func (worker *Worker) Update(name string, email string, phone string) error {
 		return errors.New("[Error]: Update details are not set")
 	}
 	if name != "" {
-		worker.name = name
+		worker.Name = name
 	}
 	if email != "" {
-		worker.email = email
+		worker.Email = email
 	}
 	if phone != "" {
-		worker.phone = phone
+		worker.Phone = phone
 	}
 	return nil
 }

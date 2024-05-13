@@ -2,35 +2,63 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/qemanuel/tech-sup-webapp/backend/models"
 	"github.com/qemanuel/tech-sup-webapp/backend/persistence"
 )
 
-func LoadDatabase(databasePath string, tableNames []string) (*persistence.Database, map[string]*persistence.Table) {
-	loadDatabase, _ := persistence.LoadDatabase(databasePath)
-	tablesMap := map[string]*persistence.Table{}
-	for _, tableName := range tableNames {
-		table, _ := persistence.LoadTable(databasePath, tableName)
-		tablesMap[tableName] = table
+func GetWorkers(w http.ResponseWriter, r *http.Request) {
+	response, err := persistence.GetAll("workers")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
 	}
-	return loadDatabase, tablesMap
+	json.NewEncoder(w).Encode(response)
 }
 
-func GetCustomer(w http.ResponseWriter, r *http.Request) {
-	//databasePath := os.Getenv("DB_PATH")
-	databasePath := "./database"
+func GetWorker(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	table, _ := persistence.LoadTable(databasePath, "workers")
-	response := table.ReadRow(vars["id"])
-	responseMap := map[string]string{
-		"id":    response[0],
-		"name":  response[1],
-		"email": response[2],
-		"phone": response[3],
-	}
-	res, _ := json.Marshal(responseMap)
+	response := persistence.Find("workers", vars["id"])
+	res, _ := json.Marshal(response)
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
+}
+
+func CreateWorker(w http.ResponseWriter, r *http.Request) {
+	var worker models.Worker
+	json.NewDecoder(r.Body).Decode(&worker)
+	id, err := persistence.Add("workers", worker)
+	idString := fmt.Sprint(id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
+	worker.SetId(idString)
+	json.NewEncoder(w).Encode(&worker)
+}
+
+func UpdateWorker(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	var worker models.Worker
+	json.NewDecoder(r.Body).Decode(&worker)
+	err := persistence.Update("workers", worker, vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
+	json.NewEncoder(w).Encode(&worker)
+}
+
+func DeleteWorker(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	err := persistence.Remove("workers", vars["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Worker not found"))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

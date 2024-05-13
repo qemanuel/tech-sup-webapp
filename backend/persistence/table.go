@@ -5,19 +5,67 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type Table struct {
-	id         int
-	keys       []string
-	nextId     int
-	path       string
-	csvPath    string
-	nextIdPath string
+	id      string
+	keys    []string
+	nextId  int
+	path    string
+	csvPath string
 }
 
-func (table *Table) write(row []string) error {
+func mapToCsv(tableName string, rowMap map[string]string) (keysSlice []string, valuesSlice []string) {
+	table := DB.TablesMap[tableName]
+	keysSlice = table.keys
+	returnSlice := make([]string, len(keysSlice))
+	for i, key := range table.keys {
+		returnSlice[i] = rowMap[key]
+	}
+	valuesSlice = returnSlice
+	return keysSlice, valuesSlice
+}
+
+func csvToMap(keysSlice []string, valuesSlice []string) map[string]string {
+	returnMap := make(map[string]string, len(keysSlice))
+	for i, key := range keysSlice {
+		returnMap[key] = valuesSlice[i]
+	}
+	return returnMap
+}
+
+func writeAll(tableName string, tableMapSlice []map[string]string) error {
+	table := DB.TablesMap[tableName]
+	csvSlice := make([][]string, len(tableMapSlice)+1)
+	fmt.Println(len(tableMapSlice), len(csvSlice))
+	for i, rowMap := range tableMapSlice {
+		keysSlice, valuesSlice := mapToCsv(tableName, rowMap)
+		if i == 0 {
+			csvSlice[i] = keysSlice
+		}
+		csvSlice[i+1] = valuesSlice
+	}
+	fmt.Println(csvSlice)
+	f, err := os.OpenFile(table.csvPath, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	// Reset the file size
+	f.Truncate(0)
+	// Position on the beginning of the file
+	f.Seek(0, 0)
+	w := csv.NewWriter(f)
+	w.WriteAll(csvSlice)
+	w.Flush()
+	f.Close()
+	return err
+}
+
+func write(tableName string, modelMap map[string]string) error {
+	table := DB.TablesMap[tableName]
+	_, row := mapToCsv(tableName, modelMap)
 	f, err := os.OpenFile(table.csvPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	// Position on the end of the file
 	f.Seek(0, 2)
@@ -28,108 +76,139 @@ func (table *Table) write(row []string) error {
 	return err
 }
 
-func (table *Table) updateId() error {
-	table.nextId += 1
-	nextId := []string{fmt.Sprint(table.nextId)}
-	nextIdRow := [][]string{nextId}
-	err := table.overWrite(table.nextIdPath, nextIdRow)
-	return err
-}
-
-func (table *Table) overWrite(csvPath string, row [][]string) error {
-	f, err := os.OpenFile(csvPath, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	// Reset the file size
-	f.Truncate(0)
-	// Position on the beginning of the file
-	f.Seek(0, 0)
-	w := csv.NewWriter(f)
-	w.WriteAll(row)
-	w.Flush()
-	f.Close()
-	return nil
-}
-
-func readAll(csvPath string) ([][]string, error) {
-	csvfile, err := os.Open(csvPath)
-	if err != nil {
-		return nil, err
-	}
-	// Position on the begining of the file
-	csvfile.Seek(0, 0)
-	reader := csv.NewReader(csvfile)
-	rawCSVdata, err := reader.ReadAll()
-	if err != nil {
-		return nil, err
-	}
-	csvfile.Close()
-	return rawCSVdata, nil
-}
-
-func (table *Table) ReadRow(id string) []string {
-	rawCSVdata, err := readAll(table.csvPath)
-	if err != nil {
-		return nil
-	}
-	found := []string{}
-	for _, line := range rawCSVdata {
-		if line[0] == id {
-			found = line
+func overWrite(tableName string, modelMap map[string]string, id string) error {
+	tableMapSlice, _ := GetAll(tableName)
+	var updatedMapSlice []map[string]string
+	for index, rowMap := range tableMapSlice {
+		if rowMap["id"] == id {
+			updatedMapSlice = append(updatedMapSlice, tableMapSlice[:index]...)
+			updatedMapSlice = append(updatedMapSlice, modelMap)
+			updatedMapSlice = append(updatedMapSlice, tableMapSlice[index+1:]...)
 			break
 		}
 	}
-	return found
-}
-
-func (table *Table) AddRow(row []string) (int, error) {
-	fullRow := []string{fmt.Sprint(table.nextId)}
-	fullRow = append(fullRow, row...)
-	table.write(fullRow)
-	returnID := table.nextId
-	table.updateId()
-	return returnID, nil
-}
-
-func (table *Table) RemoveRow(id string) error {
-	rawCSVdata, err := readAll(table.csvPath)
-	if err != nil {
-		return nil
-	}
-	var updatedCSVData [][]string
-	for index, line := range rawCSVdata {
-		if line[0] == id {
-			updatedCSVData = append(rawCSVdata[:index], rawCSVdata[index+1:]...)
-			break
-		}
-	}
-	if updatedCSVData != nil {
-		table.overWrite(table.csvPath, updatedCSVData)
+	if updatedMapSlice != nil {
+		writeAll(tableName, updatedMapSlice)
 		return nil
 	} else {
 		return errors.New("[Error]: ID not found")
 	}
 }
 
-func LoadTable(path string, tableName string) (*Table, error) {
-	if path == "" || tableName == "" {
-		return nil, errors.New("[Error]: Database path and table name must be set")
+func updateId(tableName string) error {
+	var table *Table
+	if tableName == "system" {
+		table = DB.TablesMap["system"]
+		table.nextId += 1
+		nextIdFile := DB.NextIdFile
+		rowSlice := []string{fmt.Sprint(table.nextId)}
+		csvSlice := [][]string{rowSlice}
+		f, err := os.OpenFile(nextIdFile, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+		// Reset the file size
+		f.Truncate(0)
+		// Position on the beginning of the file
+		f.Seek(0, 0)
+		w := csv.NewWriter(f)
+		w.WriteAll(csvSlice)
+		w.Flush()
+		f.Close()
+		return nil
+
+	} else {
+		table = DB.TablesMap[tableName]
+		tableRow := Find("system", table.id)
+		if tableRow == nil {
+			return errors.New("[Error]: table not found")
+		}
+		table.nextId += 1
+		nextId := fmt.Sprint(table.nextId)
+		tableRow["nextId"] = nextId
+		overWrite("system", tableRow, table.id)
 	}
-	csvPath := fmt.Sprintf("%s/%s.csv", path, tableName)
-	nextIdPath := fmt.Sprintf("%s/%s.nextId", path, tableName)
-	// read nextId file value
-	nextIdRaw, _ := readAll(nextIdPath)
-	nextId, _ := strconv.Atoi(nextIdRaw[0][0])
-	// read table file keys
-	tableRaw, _ := readAll(csvPath)
-	tableKeys := tableRaw[0]
-	return &Table{
-		id:         0,
-		keys:       tableKeys,
-		nextId:     nextId,
-		path:       path,
-		csvPath:    csvPath,
-		nextIdPath: nextIdPath,
-	}, nil
+	return nil
+}
+
+func GetAll(tableName string) ([]map[string]string, error) {
+	table := DB.TablesMap[tableName]
+	csvfile, err := os.Open(table.csvPath)
+	if err != nil {
+		return nil, err
+	}
+	// Position on the begining of the file
+	csvfile.Seek(0, 0)
+	reader := csv.NewReader(csvfile)
+	csvSlice, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	csvfile.Close()
+	tableMapSlice := make([]map[string]string, len(csvSlice)-1)
+	keysSlice := csvSlice[0]
+	rowsSlice := csvSlice[1:]
+	for i, row := range rowsSlice {
+		if len(row) != 0 {
+			tableMapSlice[i] = csvToMap(keysSlice, row)
+		}
+	}
+	return tableMapSlice, nil
+}
+
+func Find(tableName string, id string) map[string]string {
+	tableMapSlice, _ := GetAll(tableName)
+	tableFound := make(map[string]string, len(tableMapSlice[0]))
+	for _, rowMap := range tableMapSlice {
+		if rowMap["id"] == id {
+			tableFound = rowMap
+			break
+		}
+	}
+	return tableFound
+}
+
+func Add(tableName string, model interface{}) (int, error) {
+	var modelMap map[string]string
+	mapstructure.Decode(model, &modelMap)
+	table := DB.TablesMap[tableName]
+	returnID := table.nextId
+	modelMap["id"] = fmt.Sprint(returnID)
+	err := write(tableName, modelMap)
+	if err != nil {
+		return 0, err
+	}
+	updateId(tableName)
+	return returnID, nil
+}
+
+func Update(tableName string, model interface{}, id string) error {
+	var modelMap = make(map[string]string)
+	mapstructure.Decode(model, modelMap)
+	err := overWrite(tableName, modelMap, id)
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func Remove(tableName string, id string) error {
+	tableMapSlice, err := GetAll(tableName)
+	if err != nil {
+		return nil
+	}
+	var updatedMapSlice []map[string]string
+	for index, modelMap := range tableMapSlice {
+		if modelMap["id"] == id {
+			updatedMapSlice = append(tableMapSlice[:index], tableMapSlice[index+1:]...)
+			break
+		}
+	}
+	if updatedMapSlice != nil {
+		writeAll(tableName, updatedMapSlice)
+		return nil
+	} else {
+		return errors.New("[Error]: ID not found")
+	}
 }

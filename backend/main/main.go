@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/qemanuel/tech-sup-webapp/backend/handlers"
@@ -18,24 +16,25 @@ func initDatabase(databasePath string) {
 		//		"jobs":       {""},
 		//		"incidences": {""},
 	}
-	tablesMap := map[string]*persistence.Table{}
-	newDatabase, _ := persistence.NewDatabase(databasePath)
+	persistence.NewDatabase(databasePath)
 	for tableName, keys := range tables {
-		table, _ := newDatabase.NewTable(tableName, keys)
-		tablesMap[tableName] = table
+		persistence.DB.NewTable(tableName, keys)
 	}
 }
 
 func main() {
 	//databasePath := os.Getenv("DB_PATH")
 	databasePath := "./database"
-	_, err := os.Stat(fmt.Sprintf("%s/database.csv", databasePath))
-	if err != nil {
-		initDatabase(databasePath)
-	}
+
+	initDatabase(databasePath)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/api/v1/workers/{id:[0-9]+}", handlers.GetCustomer)
+	router.HandleFunc("/api/v1/workers/", handlers.GetWorkers).Methods("GET")
+	router.HandleFunc("/api/v1/workers/{id:[0-9]+}", handlers.GetWorker).Methods("GET")
+	router.HandleFunc("/api/v1/workers/", handlers.CreateWorker).Methods("POST")
+	router.HandleFunc("/api/v1/workers/{id:[0-9]+}", handlers.DeleteWorker).Methods("DELETE")
+	router.HandleFunc("/api/v1/workers/{id:[0-9]+}", handlers.UpdateWorker).Methods("POST")
+
 	//http.Handle("/", r)
 	http.ListenAndServe(":8010", router)
 }
