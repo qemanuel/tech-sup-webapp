@@ -9,49 +9,38 @@ import (
 )
 
 type Database struct {
-	Path       string
-	NextIdFile *csvHandler
-	TablesMap  map[string]*Table
+	Path      string
+	TablesMap map[string]*Table
 }
 
 var DB *Database
 
 func updateId(tableName string) error {
 	systemTable := DB.TablesMap["system"]
-	if tableName == "system" {
-		systemTable.nextId += 1
-		nextIdFile := DB.NextIdFile
-		rowSlice := []string{fmt.Sprint(systemTable.nextId)}
-		csvSlice := [][]string{rowSlice}
-		nextIdFile.writeAll(csvSlice)
+	table := DB.TablesMap[tableName]
+	tableRow, err := systemTable.Find(table.id)
+	if err != nil {
+		return errors.New("[Error]: table not found")
+	}
+	table.nextId += 1
+	nextId := fmt.Sprint(table.nextId)
+	tableRow["nextId"] = nextId
+	tableMapSlice, _ := systemTable.GetAll()
+	var updatedMapSlice []map[string]string
+	for index, rowMap := range tableMapSlice {
+		if rowMap["id"] == table.id {
+			updatedMapSlice = append(updatedMapSlice, tableMapSlice[:index]...)
+			updatedMapSlice = append(updatedMapSlice, tableRow)
+			updatedMapSlice = append(updatedMapSlice, tableMapSlice[index+1:]...)
+			break
+		}
+	}
+	if updatedMapSlice != nil {
+		csvSlice := mapAllToCsv(systemTable.name, updatedMapSlice)
+		systemTable.csvHandler.writeAll(csvSlice)
 		return nil
-
 	} else {
-		table := DB.TablesMap[tableName]
-		tableRow, err := systemTable.Find(table.id)
-		if err != nil {
-			return errors.New("[Error]: table not found")
-		}
-		table.nextId += 1
-		nextId := fmt.Sprint(table.nextId)
-		tableRow["nextId"] = nextId
-		tableMapSlice, _ := systemTable.GetAll()
-		var updatedMapSlice []map[string]string
-		for index, rowMap := range tableMapSlice {
-			if rowMap["id"] == table.id {
-				updatedMapSlice = append(updatedMapSlice, tableMapSlice[:index]...)
-				updatedMapSlice = append(updatedMapSlice, tableRow)
-				updatedMapSlice = append(updatedMapSlice, tableMapSlice[index+1:]...)
-				break
-			}
-		}
-		if updatedMapSlice != nil {
-			csvSlice := mapAllToCsv(systemTable.name, updatedMapSlice)
-			systemTable.csvHandler.writeAll(csvSlice)
-			return nil
-		} else {
-			return errors.New("[Error]: ID not found")
-		}
+		return errors.New("[Error]: ID not found")
 	}
 }
 
@@ -61,28 +50,28 @@ func NewDatabase(path string) (*Database, error) {
 	}
 	tableName := "system"
 	csvPath := fmt.Sprintf("%s/%s.csv", path, tableName)
-	nextIdPath := fmt.Sprintf("%s/nextId", path)
-
 	csvHandler, _ := newCsvHandler(csvPath)
-	nextIdHandler, _ := newCsvHandler(nextIdPath)
 
-	systemKeys := []string{"id", "path", "keys", "nextId"}
+	tableKeys := []string{"id", "path", "keys", "nextId"}
+	tableRow := []string{"0", csvPath, strings.Join(tableKeys, " "), "1"}
+	var csvSlice = make([][]string, 2)
+	csvSlice[0] = tableKeys
+	csvSlice[1] = tableRow
 	systemTable := &Table{
 		id:         "0",
 		name:       tableName,
-		keys:       systemKeys,
+		keys:       tableKeys,
 		nextId:     1,
 		csvHandler: csvHandler,
 	}
 	tablesMap := make(map[string]*Table)
 	tablesMap[tableName] = systemTable
 	DB = &Database{
-		Path:       path,
-		NextIdFile: nextIdHandler,
-		TablesMap:  tablesMap,
+		Path:      path,
+		TablesMap: tablesMap,
 	}
 	if _, err := os.Stat(csvPath); os.IsNotExist(err) {
-		err := systemTable.csvHandler.write(systemKeys)
+		err := systemTable.csvHandler.writeAll(csvSlice)
 		if err != nil {
 			return nil, err
 		}
