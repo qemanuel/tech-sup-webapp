@@ -5,10 +5,10 @@ import (
 )
 
 type Customer struct {
-	name  string
-	email string
-	phone string
-	id    int
+	Name  string `mapstructure:"name" json:"name"`
+	Email string `mapstructure:"email" json:"email"`
+	Phone string `mapstructure:"phone" json:"phone"`
+	Id    string `mapstructure:"id" json:"id"`
 }
 
 func NewCustomer(name string, email string, phone string) (*Customer, error) {
@@ -16,41 +16,41 @@ func NewCustomer(name string, email string, phone string) (*Customer, error) {
 		return nil, errors.New("error, Name, Email and Phone must be set")
 	} else {
 		return &Customer{
-			name:  name,
-			email: email,
-			phone: phone,
+			Name:  name,
+			Email: email,
+			Phone: phone,
 		}, nil
 	}
 }
 
 func GetCustomer(cust *Customer) Customer {
 	customer := Customer{
-		name:  cust.name,
-		email: cust.email,
-		phone: cust.phone,
-		id:    cust.id,
+		Name:  cust.Name,
+		Email: cust.Email,
+		Phone: cust.Phone,
+		Id:    cust.Id,
 	}
 	return customer
 }
 
-func (cust *Customer) SetId(id int) error {
-	if id != 0 {
+func (cust *Customer) SetId(id string) error {
+	if id != "" {
 		return errors.New("[Error]: ID already assigned")
 	} else {
-		cust.id = id
+		cust.Id = id
 	}
 	return nil
 }
 
-func (cust *Customer) GetId() int {
-	return cust.id
+func (cust *Customer) GetId() string {
+	return cust.Id
 }
 
 func (cust *Customer) String() []string {
 	return []string{
-		cust.name,
-		cust.email,
-		cust.phone,
+		cust.Name,
+		cust.Email,
+		cust.Phone,
 	}
 }
 
@@ -59,13 +59,13 @@ func (cust *Customer) Update(name string, email string, phone string) error {
 		return errors.New("[Error]: Update details are not set")
 	}
 	if name != "" {
-		cust.name = name
+		cust.Name = name
 	}
 	if email != "" {
-		cust.email = email
+		cust.Email = email
 	}
 	if phone != "" {
-		cust.phone = phone
+		cust.Phone = phone
 	}
 	return nil
 }
