@@ -16,7 +16,7 @@ type Table struct {
 	csvHandler *csvHandler
 }
 
-func mapAllToCsv(tableName string, tableMapSlice []map[string]string) [][]string {
+func mapAllToCsv(tableName string, tableMapSlice []map[string]interface{}) [][]string {
 	csvSlice := make([][]string, len(tableMapSlice)+1)
 	for i, rowMap := range tableMapSlice {
 		keysSlice, valuesSlice := mapToCsv(tableName, rowMap)
@@ -28,31 +28,31 @@ func mapAllToCsv(tableName string, tableMapSlice []map[string]string) [][]string
 	return csvSlice
 }
 
-func mapToCsv(tableName string, rowMap map[string]string) (keysSlice []string, valuesSlice []string) {
+func mapToCsv(tableName string, rowMap map[string]interface{}) (keysSlice []string, valuesSlice []string) {
 	table := DB.TablesMap[tableName]
 	keysSlice = table.keys
 	returnSlice := make([]string, len(keysSlice))
 	for i, key := range table.keys {
-		returnSlice[i] = rowMap[key]
+		returnSlice[i] = fmt.Sprint(rowMap[key])
 	}
 	valuesSlice = returnSlice
 	return keysSlice, valuesSlice
 }
 
-func csvToMap(keysSlice []string, valuesSlice []string) map[string]string {
-	returnMap := make(map[string]string, len(keysSlice))
+func csvToMap(keysSlice []string, valuesSlice []string) map[string]interface{} {
+	returnMap := make(map[string]interface{}, len(keysSlice))
 	for i, key := range keysSlice {
 		returnMap[key] = valuesSlice[i]
 	}
 	return returnMap
 }
 
-func (table *Table) GetAll() ([]map[string]string, error) {
+func (table *Table) GetAll() ([]map[string]interface{}, error) {
 	csvSlice, err := table.csvHandler.read()
 	if err != nil {
 		return nil, err
 	}
-	tableMapSlice := make([]map[string]string, len(csvSlice)-1)
+	tableMapSlice := make([]map[string]interface{}, len(csvSlice)-1)
 	keysSlice := csvSlice[0]
 	rowsSlice := csvSlice[1:]
 	for i, row := range rowsSlice {
@@ -63,9 +63,9 @@ func (table *Table) GetAll() ([]map[string]string, error) {
 	return tableMapSlice, nil
 }
 
-func (table *Table) Find(id string) (map[string]string, error) {
+func (table *Table) Find(id string) (map[string]interface{}, error) {
 	tableMapSlice, _ := table.GetAll()
-	var tableFound map[string]string
+	var tableFound map[string]interface{}
 	for _, rowMap := range tableMapSlice {
 		if rowMap["id"] == id {
 			tableFound = rowMap
@@ -79,8 +79,8 @@ func (table *Table) Find(id string) (map[string]string, error) {
 	}
 }
 
-func (table *Table) Add(model interface{}) (int, error) {
-	var modelMap map[string]string
+func (table *Table) Add(model interface{}) (interface{}, error) {
+	var modelMap map[string]interface{}
 	mapstructure.Decode(model, &modelMap)
 	timeStamp := time.Now()
 	returnID := table.nextId
@@ -93,16 +93,16 @@ func (table *Table) Add(model interface{}) (int, error) {
 		return 0, err
 	}
 	updateId(table.name)
-	return returnID, nil
+	return modelMap, nil
 }
 
-func (table *Table) Update(model interface{}, id string) error {
-	var modelMap = make(map[string]string)
+func (table *Table) Update(model interface{}, id string) (interface{}, error) {
+	var modelMap = make(map[string]interface{})
 	mapstructure.Decode(model, &modelMap)
 	modelMap["id"] = id
 	modelMap["updated_at"] = time.Now().Format(time.DateTime)
 	tableMapSlice, _ := table.GetAll()
-	var updatedMapSlice []map[string]string
+	var updatedMapSlice []map[string]interface{}
 	for index, rowMap := range tableMapSlice {
 		if rowMap["id"] == id {
 			modelMap["created_at"] = rowMap["created_at"]
@@ -115,9 +115,9 @@ func (table *Table) Update(model interface{}, id string) error {
 	if updatedMapSlice != nil {
 		csvSlice := mapAllToCsv(table.name, updatedMapSlice)
 		table.csvHandler.writeAll(csvSlice)
-		return nil
+		return modelMap, nil
 	} else {
-		return errors.New("[Error]: ID not found")
+		return nil, errors.New("[Error]: ID not found")
 	}
 }
 
@@ -126,7 +126,7 @@ func (table *Table) Remove(id string) error {
 	if err != nil {
 		return nil
 	}
-	var updatedMapSlice []map[string]string
+	var updatedMapSlice []map[string]interface{}
 	for index, modelMap := range tableMapSlice {
 		if modelMap["id"] == id {
 			updatedMapSlice = append(tableMapSlice[:index], tableMapSlice[index+1:]...)

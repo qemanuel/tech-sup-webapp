@@ -40,7 +40,7 @@ func updateId(tableName string) error {
 	tableRow["updated_at"] = timeStamp.Format(time.DateTime)
 	// write updated values to system table
 	tableMapSlice, _ := systemTable.GetAll()
-	var updatedMapSlice []map[string]string
+	var updatedMapSlice []map[string]interface{}
 	for index, rowMap := range tableMapSlice {
 		if rowMap["id"] == table.Id {
 			updatedMapSlice = append(updatedMapSlice, tableMapSlice[:index]...)
@@ -152,7 +152,7 @@ func (database *Database) NewTable(tableName string, keys []string) (*Table, err
 		if err != nil {
 			return nil, err
 		}
-		returnTable.nextId, _ = strconv.Atoi(tableRow["next_id"])
+		returnTable.nextId, _ = strconv.Atoi(fmt.Sprint(tableRow["next_id"]))
 	}
 	return returnTable, err
 }
