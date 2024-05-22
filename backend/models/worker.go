@@ -49,7 +49,6 @@ func (work *Worker) GetId() string {
 
 func (work *Worker) String() []string {
 	return []string{
-		//fmt.Sprint(work.Id),
 		work.Name,
 		work.Email,
 		work.Phone,

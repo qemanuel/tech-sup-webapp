@@ -34,12 +34,12 @@ func GetCustomer(cust *Customer) Customer {
 }
 
 func (cust *Customer) SetId(id string) error {
-	if id != "" {
+	if cust.Id != "" {
 		return errors.New("[Error]: ID already assigned")
 	} else {
 		cust.Id = id
+		return nil
 	}
-	return nil
 }
 
 func (cust *Customer) GetId() string {

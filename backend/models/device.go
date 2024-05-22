@@ -39,12 +39,12 @@ func GetDevice(dev *Device) Device {
 }
 
 func (dev *Device) SetId(id string) error {
-	if id != "" {
+	if dev.Id != "" {
 		return errors.New("[Error]: ID already assigned")
 	} else {
 		dev.Id = id
+		return nil
 	}
-	return nil
 }
 
 func (dev *Device) GetId() string {
