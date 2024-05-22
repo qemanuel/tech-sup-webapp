@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,8 +15,11 @@ func GetWorkers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		res, _ := json.Marshal(response)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
 	}
-	json.NewEncoder(w).Encode(response)
 }
 
 func GetWorker(w http.ResponseWriter, r *http.Request) {
@@ -35,42 +37,61 @@ func GetWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateWorker(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["workers"]
-	var worker models.Worker
-	json.NewDecoder(r.Body).Decode(&worker)
-	id, err := table.Add(worker)
-	idString := fmt.Sprint(id)
+	// create Worker from request body
+	var workerMap map[string]string
+	json.NewDecoder(r.Body).Decode(&workerMap)
+	worker, err := models.NewWorker(workerMap["name"], workerMap["email"], workerMap["phone"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// add worker to DB
+		table := persistence.DB.TablesMap["workers"]
+		response, err := table.Add(worker)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		} else {
+			res, _ := json.Marshal(response)
+			w.WriteHeader(http.StatusOK)
+			w.Write(res)
+		}
 	}
-	worker.SetId(idString)
-	json.NewEncoder(w).Encode(&worker)
 }
 
 func UpdateWorker(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["workers"]
 	vars := mux.Vars(r)
-	id := vars["id"]
-	var worker models.Worker
-	json.NewDecoder(r.Body).Decode(&worker)
-	worker.SetId(id)
-	err := table.Update(worker, id)
+	// create Worker from request body
+	var workerMap map[string]string
+	json.NewDecoder(r.Body).Decode(&workerMap)
+	worker, err := models.NewWorker(workerMap["name"], workerMap["email"], workerMap["phone"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// Update worker on DB
+		table := persistence.DB.TablesMap["workers"]
+		id := vars["id"]
+		response, err := table.Update(worker, id)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		}
+		res, _ := json.Marshal(response)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
 	}
-	json.NewEncoder(w).Encode(&worker)
 }
 
 func DeleteWorker(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["workers"]
 	vars := mux.Vars(r)
+	table := persistence.DB.TablesMap["workers"]
 	err := table.Remove(vars["id"])
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Worker not found"))
-		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Worker deleted"))
 	}
-	w.WriteHeader(http.StatusOK)
 }

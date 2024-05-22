@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,8 +15,11 @@ func GetCustomers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		res, _ := json.Marshal(response)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
 	}
-	json.NewEncoder(w).Encode(response)
 }
 
 func GetCustomer(w http.ResponseWriter, r *http.Request) {
@@ -35,32 +37,51 @@ func GetCustomer(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateCustomer(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["customers"]
-	var customer models.Customer
-	json.NewDecoder(r.Body).Decode(&customer)
-	id, err := table.Add(customer)
-	idString := fmt.Sprint(id)
+	// create Customer from request body
+	var customerMap map[string]string
+	json.NewDecoder(r.Body).Decode(&customerMap)
+	customer, err := models.NewCustomer(customerMap["name"], customerMap["email"], customerMap["phone"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// add customer to DB
+		table := persistence.DB.TablesMap["customers"]
+		response, err := table.Add(customer)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		} else {
+			res, _ := json.Marshal(response)
+			w.WriteHeader(http.StatusOK)
+			w.Write(res)
+		}
 	}
-	customer.SetId(idString)
-	json.NewEncoder(w).Encode(&customer)
 }
 
 func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["customers"]
 	vars := mux.Vars(r)
-	id := vars["id"]
-	var customer models.Customer
-	json.NewDecoder(r.Body).Decode(&customer)
-	customer.SetId(id)
-	err := table.Update(customer, id)
+	// create Customer from request body
+	var customerMap map[string]string
+	json.NewDecoder(r.Body).Decode(&customerMap)
+	customer, err := models.NewCustomer(customerMap["name"], customerMap["email"], customerMap["phone"])
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// update Customer on DB
+		table := persistence.DB.TablesMap["customers"]
+		id := vars["id"]
+		response, err := table.Update(customer, id)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		} else {
+			res, _ := json.Marshal(response)
+			w.WriteHeader(http.StatusOK)
+			w.Write(res)
+		}
 	}
-	json.NewEncoder(w).Encode(&customer)
 }
 
 func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +91,8 @@ func DeleteCustomer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Customer not found"))
-		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Customer deleted"))
 	}
-	w.WriteHeader(http.StatusOK)
 }

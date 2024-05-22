@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,8 +15,11 @@ func GetDevices(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		res, _ := json.Marshal(response)
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
 	}
-	json.NewEncoder(w).Encode(response)
 }
 
 func GetDevice(w http.ResponseWriter, r *http.Request) {
@@ -35,32 +37,61 @@ func GetDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateDevice(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["devices"]
-	var device models.Device
-	json.NewDecoder(r.Body).Decode(&device)
-	id, err := table.Add(device)
-	idString := fmt.Sprint(id)
+	// create Device from request body
+	var deviceMap map[string]string
+	json.NewDecoder(r.Body).Decode(&deviceMap)
+	device, err := models.NewDevice(deviceMap["brand"],
+		deviceMap["kind"],
+		deviceMap["model"],
+		deviceMap["owner_id"],
+		deviceMap["serial"],
+	)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// add Device to DB
+		table := persistence.DB.TablesMap["devices"]
+		response, err := table.Add(device)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		} else {
+			res, _ := json.Marshal(response)
+			w.WriteHeader(http.StatusOK)
+			w.Write(res)
+		}
 	}
-	device.SetId(idString)
-	json.NewEncoder(w).Encode(&device)
 }
 
 func UpdateDevice(w http.ResponseWriter, r *http.Request) {
-	table := persistence.DB.TablesMap["devices"]
 	vars := mux.Vars(r)
-	id := vars["id"]
-	var device models.Device
-	json.NewDecoder(r.Body).Decode(&device)
-	device.SetId(id)
-	err := table.Update(device, id)
+	// create Device from request body
+	var deviceMap map[string]string
+	json.NewDecoder(r.Body).Decode(&deviceMap)
+	device, err := models.NewDevice(deviceMap["brand"],
+		deviceMap["kind"],
+		deviceMap["model"],
+		deviceMap["owner_id"],
+		deviceMap["serial"],
+	)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
+	} else {
+		// update Device on DB
+		table := persistence.DB.TablesMap["devices"]
+		id := vars["id"]
+		response, err := table.Update(device, id)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+		} else {
+			res, _ := json.Marshal(response)
+			w.WriteHeader(http.StatusOK)
+			w.Write(res)
+		}
 	}
-	json.NewEncoder(w).Encode(&device)
 }
 
 func DeleteDevice(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +101,8 @@ func DeleteDevice(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Device not found"))
-		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Device deleted"))
 	}
-	w.WriteHeader(http.StatusOK)
 }
