@@ -2,71 +2,27 @@ package models
 
 import (
 	"errors"
+
+	"github.com/qemanuel/tech-sup-webapp/backend/persistence"
 )
 
 type Worker struct {
-	Name  string `mapstructure:"name" json:"name"`
-	Email string `mapstructure:"email" json:"email"`
-	Phone string `mapstructure:"phone" json:"phone"`
-	Id    string `mapstructure:"id" json:"id"`
+	persistence.Record `mapstructure:",squash"`
+	Name               string `mapstructure:"name" json:"name"`
+	Email              string `mapstructure:"email" json:"email"`
+	Phone              string `mapstructure:"phone" json:"phone"`
 }
 
-func NewWorker(name string, email string, phone string) (*Worker, error) {
+func NewWorker(name string, email string, phone string) (Worker, error) {
 	if name == "" || email == "" {
-		return nil, errors.New("error, Name and Email")
+		return Worker{}, errors.New("error, Name and Email")
 	} else {
-		worker := &Worker{
-			Name:  name,
-			Email: email,
-			Phone: phone,
+		worker := Worker{
+			Record: persistence.Record{},
+			Name:   name,
+			Email:  email,
+			Phone:  phone,
 		}
 		return worker, nil
 	}
-}
-
-func GetWorker(work *Worker) Worker {
-	worker := Worker{
-		Name:  work.Name,
-		Email: work.Email,
-		Phone: work.Phone,
-		Id:    work.Id,
-	}
-	return worker
-}
-
-func (work *Worker) SetId(id string) error {
-	if work.Id != "" {
-		return errors.New("[Error]: ID already assigned")
-	} else {
-		work.Id = id
-		return nil
-	}
-}
-
-func (work *Worker) GetId() string {
-	return work.Id
-}
-
-func (work *Worker) String() []string {
-	return []string{
-		work.Name,
-		work.Email,
-		work.Phone,
-	}
-}
-
-func (worker *Worker) Update(name string, email string, phone string) error {
-	if name == "" && email == "" && phone == "" {
-		return errors.New("[Error]: Update details are not set")
-	}
-	if name != "" {
-		worker.Name = name
-	}
-	if email != "" {
-		worker.Email = email
-	}
-	if phone != "" {
-		worker.Phone = phone
-	}
-	return nil
 }
