@@ -10,9 +10,9 @@ import (
 
 func initDatabase(databasePath string) {
 	tables := map[string][]string{
-		"workers":   {"id", "name", "email", "phone"},
-		"customers": {"id", "name", "email", "phone"},
-		"devices":   {"id", "owner_id", "kind", "brand", "model", "serial"},
+		"workers":   {"name", "email", "phone"},
+		"customers": {"name", "email", "phone"},
+		"devices":   {"owner_id", "kind", "brand", "model", "serial"},
 		//		"jobs":       {""},
 		//		"incidences": {""},
 	}

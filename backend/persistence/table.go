@@ -3,15 +3,16 @@ package persistence
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
 
 type Table struct {
-	id         string
+	Record
 	name       string
 	keys       []string
-	nextId     int
+	nextId     int `mapstructure:"next_id"`
 	csvHandler *csvHandler
 }
 
@@ -81,8 +82,11 @@ func (table *Table) Find(id string) (map[string]string, error) {
 func (table *Table) Add(model interface{}) (int, error) {
 	var modelMap map[string]string
 	mapstructure.Decode(model, &modelMap)
+	timeStamp := time.Now()
 	returnID := table.nextId
 	modelMap["id"] = fmt.Sprint(returnID)
+	modelMap["created_at"] = timeStamp.Format(time.DateTime)
+	modelMap["updated_at"] = ""
 	_, rowSlice := mapToCsv(table.name, modelMap)
 	err := table.csvHandler.write(rowSlice)
 	if err != nil {
@@ -96,10 +100,12 @@ func (table *Table) Update(model interface{}, id string) error {
 	var modelMap = make(map[string]string)
 	mapstructure.Decode(model, &modelMap)
 	modelMap["id"] = id
+	modelMap["updated_at"] = time.Now().Format(time.DateTime)
 	tableMapSlice, _ := table.GetAll()
 	var updatedMapSlice []map[string]string
 	for index, rowMap := range tableMapSlice {
 		if rowMap["id"] == id {
+			modelMap["created_at"] = rowMap["created_at"]
 			updatedMapSlice = append(updatedMapSlice, tableMapSlice[:index]...)
 			updatedMapSlice = append(updatedMapSlice, modelMap)
 			updatedMapSlice = append(updatedMapSlice, tableMapSlice[index+1:]...)
