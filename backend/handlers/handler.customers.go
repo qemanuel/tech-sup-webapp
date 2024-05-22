@@ -51,9 +51,11 @@ func CreateCustomer(w http.ResponseWriter, r *http.Request) {
 func UpdateCustomer(w http.ResponseWriter, r *http.Request) {
 	table := persistence.DB.TablesMap["customers"]
 	vars := mux.Vars(r)
+	id := vars["id"]
 	var customer models.Customer
 	json.NewDecoder(r.Body).Decode(&customer)
-	err := table.Update(customer, vars["id"])
+	customer.SetId(id)
+	err := table.Update(customer, id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))

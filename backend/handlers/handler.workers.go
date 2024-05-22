@@ -51,9 +51,11 @@ func CreateWorker(w http.ResponseWriter, r *http.Request) {
 func UpdateWorker(w http.ResponseWriter, r *http.Request) {
 	table := persistence.DB.TablesMap["workers"]
 	vars := mux.Vars(r)
+	id := vars["id"]
 	var worker models.Worker
 	json.NewDecoder(r.Body).Decode(&worker)
-	err := table.Update(worker, vars["id"])
+	worker.SetId(id)
+	err := table.Update(worker, id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))

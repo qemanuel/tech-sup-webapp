@@ -51,9 +51,11 @@ func CreateDevice(w http.ResponseWriter, r *http.Request) {
 func UpdateDevice(w http.ResponseWriter, r *http.Request) {
 	table := persistence.DB.TablesMap["devices"]
 	vars := mux.Vars(r)
+	id := vars["id"]
 	var device models.Device
 	json.NewDecoder(r.Body).Decode(&device)
-	err := table.Update(device, vars["id"])
+	device.SetId(id)
+	err := table.Update(device, id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
