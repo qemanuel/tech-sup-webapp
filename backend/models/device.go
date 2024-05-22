@@ -15,11 +15,11 @@ type Device struct {
 	Serial             string `mapstructure:"serial" json:"serial"`
 }
 
-func NewDevice(brand string, kind string, model string, ownerId string, serial string) (*Device, error) {
+func NewDevice(brand string, kind string, model string, ownerId string, serial string) (Device, error) {
 	if brand == "" || kind == "" || model == "" || ownerId == "" {
-		return nil, errors.New("[Error]: Customer, Kind, Brand and Model must be set")
+		return Device{}, errors.New("[Error]: Customer, Kind, Brand and Model must be set")
 	} else {
-		return &Device{
+		return Device{
 			Record:  persistence.Record{},
 			Brand:   brand,
 			Kind:    kind,

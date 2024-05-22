@@ -13,11 +13,11 @@ type Customer struct {
 	Phone              string `mapstructure:"phone" json:"phone"`
 }
 
-func NewCustomer(name string, email string, phone string) (*Customer, error) {
+func NewCustomer(name string, email string, phone string) (Customer, error) {
 	if name == "" || email == "" || phone == "" {
-		return nil, errors.New("error, Name, Email and Phone must be set")
+		return Customer{}, errors.New("error, Name, Email and Phone must be set")
 	} else {
-		return &Customer{
+		return Customer{
 			Record: persistence.Record{},
 			Name:   name,
 			Email:  email,
