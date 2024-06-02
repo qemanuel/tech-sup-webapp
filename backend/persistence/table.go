@@ -73,9 +73,34 @@ func (table *Table) Find(id string) (map[string]interface{}, error) {
 		}
 	}
 	if tableFound == nil {
-		return nil, errors.New("404 Not Found")
+		return nil, errors.New("not found")
 	} else {
 		return tableFound, nil
+	}
+}
+
+func (table *Table) Search(query map[string]string) ([]map[string]interface{}, error) {
+	tableMapSlice, _ := table.GetAll()
+	var foundSlice []map[string]interface{}
+	for _, rowMap := range tableMapSlice {
+		isFound := true
+		for key, value := range query {
+			if value == "" {
+				continue
+			}
+			if fmt.Sprint(rowMap[key]) != value {
+				isFound = false
+				break
+			}
+		}
+		if isFound {
+			foundSlice = append(foundSlice, rowMap)
+		}
+	}
+	if len(foundSlice) == 0 {
+		return nil, errors.New("not found")
+	} else {
+		return foundSlice, nil
 	}
 }
 
