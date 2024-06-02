@@ -2,80 +2,37 @@ package models
 
 import (
 	"errors"
+	"slices"
+
+	"github.com/qemanuel/tech-sup-webapp/backend/persistence"
 )
 
 type Job struct {
-	device       *Device
-	status       string
-	observations string
-	history      *IncidenceList
-	id           int
-	customer     *Customer
-	responsible  *Worker
-	autor        *Worker
+	persistence.Record `mapstructure:",squash"`
+	DeviceId           string `mapstructure:"device_id" json:"device_id"`
+	Status             string `mapstructure:"status" json:"status"`
+	Reason             string `mapstructure:"reason" json:"reason"`
+	Observations       string `mapstructure:"observations" json:"observations"`
+	AuthorId           string `mapstructure:"author_id" json:"author_id"`
+	AssignedId         string `mapstructure:"assigned_id" json:"assigned_id"`
 }
 
-func NewJob(device *Device, reason string, observations string, customer *Customer, responsible *Worker, autor *Worker) (*Job, error) {
-	if reason == "" || customer == nil || autor == nil || device == nil {
-		return nil, errors.New("[Error]: there are missing inputs")
+func NewJob(deviceId string, reason string, observations string, status string, assignedId string, authorId string) (Job, error) {
+
+	validStatus := []string{"ingressed", "in-progress", "on-hold", "finished", "egressed"}
+	if !slices.Contains(validStatus, status) {
+		return Job{}, errors.New("[Error]: Status invalid")
 	}
-	if responsible == nil {
-		responsible = autor
+	if deviceId == "" || reason == "" || authorId == "" {
+		return Job{}, errors.New("[Error]: device-id, reason and author-id are required")
 	}
 
-	return &Job{
-		device:       device,
-		status:       "ingressed",
-		observations: observations,
-		customer:     customer,
-		responsible:  responsible,
-		autor:        autor,
+	return Job{
+		DeviceId:     deviceId,
+		Status:       status,
+		Reason:       reason,
+		Observations: observations,
+		AuthorId:     authorId,
+		AssignedId:   assignedId,
 	}, nil
-}
-
-func (job *Job) UpdateJobStatus(status string) error {
-	var err error
-	switch status {
-	case "working":
-		if job.status != "ingressed" && job.status != "waiting" {
-			err = errors.New("[Error]: status invalid")
-		} else {
-			job.status = status
-		}
-	case "waiting":
-		if job.status != "ingressed" && job.status != "working" {
-			err = errors.New("[Error]: status invalid")
-		} else {
-			job.status = status
-		}
-	case "egressed":
-		if job.status != "ingressed" && job.status != "working" && job.status != "waiting" {
-			err = errors.New("[Error]: status invalid")
-		} else {
-			job.status = status
-		}
-	default:
-		err = errors.New("[Error]: status invalid")
-	}
-	return err
-}
-
-func (job *Job) UpdateJobResponsible(responsible *Worker) error {
-	var err error
-	if responsible == nil {
-		err = errors.New("[Error]: Responsible can't be nil")
-	} else {
-		job.responsible = responsible
-	}
-	return err
-}
-
-func (job *Job) UpdateJobCustomer(customer *Customer) error {
-	var err error
-	if customer == nil {
-		err = errors.New("[Error]: Customer can't be nil")
-	} else {
-		job.customer = customer
-	}
-	return err
 }

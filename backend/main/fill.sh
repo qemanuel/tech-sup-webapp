@@ -69,6 +69,51 @@ fill_devices(){
            "http://localhost:8010/api/v1/devices/"
 }
 
+fill_jobs(){
+       curl   --header "Content-Type: application/json" \
+              --request POST \
+              --data '{"device_id":"1",
+                     "reason":"falla",
+                     "observations": "",
+                     "status": "ingressed",
+                     "assigned_id": "1",
+                     "author_id": "1"}'\
+              "http://localhost:8010/api/v1/jobs/"
+       curl   --header "Content-Type: application/json" \
+              --request POST \
+              --data '{"device_id":"2",
+                     "reason":"falla",
+                     "observations": "a",
+                     "status": "ingressed",
+                     "assigned_id": "2",
+                     "author_id": "2"}'\
+              "http://localhost:8010/api/v1/jobs/"
+       curl   --header "Content-Type: application/json" \
+              --request POST \
+              --data '{"device_id":"3",
+                     "reason":"falla",
+                     "observations": "b",
+                     "status": "ingressed",
+                     "assigned_id": "1",
+                     "author_id": "1"}'\
+              "http://localhost:8010/api/v1/jobs/"
+       curl   --header "Content-Type: application/json" \
+              --request POST \
+              --data '{"device_id":"4",
+                     "reason":"falla",
+                     "observations": "c",
+                     "status": "ingressed",
+                     "assigned_id": "2",
+                     "author_id": "2"}'\
+              "http://localhost:8010/api/v1/jobs/"
+}
+
 fill_workers
 fill_customers
 fill_devices
+fill_jobs
+
+# curl   'http://localhost:8010/api/v1/jobs/?deviceId="1"&authorId="1"&assignedId="1"'
+#
+#
+#
